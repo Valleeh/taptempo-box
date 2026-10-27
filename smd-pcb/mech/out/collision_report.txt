@@ -1,0 +1,6 @@
+PCB vs. Gehaeuse/Deckelteile: keine Kollisionen
+USB-C-Stecker (Umspritzung 11.5 x 6): Ueberlappung mit Rueckwand 0.00 mm^3 -> passt
+9V-Stecker (Umspritzung D9.5): Ueberlappung mit Rueckwand 0.00 mm^3 -> passt
+Klinkenstecker (D6): Ueberlappung mit Rueckwand 0.00 mm^3 -> passt
+Dupont-Stecker Oberkante z=31.1 (Deckel-Unterseite z=34.0)
+PCB-Modell: x 4.0..56.0, y 37.5..107.9, z 5.3..17.1

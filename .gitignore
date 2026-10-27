@@ -1,0 +1,21 @@
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# KiCad local/temp files
+*.kicad_prl
+*.lck
+~*.lck
+fp-info-cache
+*-backups/
+.mcp-backups/
+_autosave-*
+*.bak
+
+# zipped share packages (rebuild from the folders)
+*-paket*.zip
+
+# local archive of the original working folders
+.archive/
