@@ -1,6 +1,14 @@
 """SVG build drawings for the perfboard (component side + mirrored solder side)."""
+import importlib
 import math
+import sys
 import perfboard as P
+
+
+def use(module):
+    """switch the layout the drawings are made from (perfboard or a variant like perfboard_2trs)"""
+    global P
+    P = module
 
 S = 9.0                      # px per mm
 M = 34                       # margin for grid labels
@@ -198,7 +206,16 @@ def standalone(svg, title):
             + f'<rect width="100%" height="100%" fill="#ffffff"/>' + svg[head_end:])
 
 
+def suffix():
+    return "_" + P.NAME if hasattr(P, "NAME") else ""
+
+
 if __name__ == "__main__":
-    open("component_side.svg", "w").write(standalone(component_side(), "Bestückungsseite"))
-    open("solder_side.svg", "w").write(standalone(solder_side(), "Lötseite"))
+    # python3 drawings.py            -> component_side.svg / solder_side.svg
+    # python3 drawings.py 2trs       -> component_side_2trs.svg / solder_side_2trs.svg
+    if len(sys.argv) > 1:
+        use(importlib.import_module("perfboard_" + sys.argv[1]))
+    assert not P.check(), P.check()
+    for side, fn, title in (("component_side", component_side, "Bestückungsseite"), ("solder_side", solder_side, "Lötseite")):
+        open(f"{side}{suffix()}.svg", "w").write(standalone(fn(), title))
     print("ok")

@@ -103,17 +103,23 @@ EXPECTED = {
 
 
 def pin_id(c, hole, label, net):
-    if c["ref"] in ("C1", "C2"):
+    if c["kind"] == "cap":
         return f"{c['ref']}.{net}"
     if c["ref"] == "J5" and label == "SW" or c["ref"] == "U1" and label == "GND":
         return f"{c['ref']}.{label}@{hole}"
     return f"{c['ref']}.{label}"
 
 
-def check():
+def check(components=None, bare=None, insulated=None, expected=None):
+    """Verify the layout against the schematic. Defaults to this module's data;
+    variants (e.g. perfboard_2trs.py) pass their own lists."""
+    components = COMPONENTS if components is None else components
+    bare = BARE if bare is None else bare
+    insulated = INSULATED if insulated is None else insulated
+    expected = EXPECTED if expected is None else expected
     errors = []
     pin_at = {}
-    for c in COMPONENTS:
+    for c in components:
         for h, (label, net) in c["pins"].items():
             if h in pin_at:
                 errors.append(f"hole {h} used twice ({pin_at[h][0]} and {c['ref']})")
@@ -130,7 +136,7 @@ def check():
     def union(a, b): parent[find(a)] = find(b)
 
     bare_owner = {}
-    for net, pts in BARE:
+    for net, pts in bare:
         for a, b in zip(pts, pts[1:]):
             (ca, ra), (cb, rb) = cr(a), cr(b)
             if ca != cb and ra != rb:
@@ -145,7 +151,7 @@ def check():
                     errors.append(f"bare wires {bare_owner[h]} and {net} share hole {h}")
                 bare_owner[h] = net
                 union(h, a)
-    for net, a, b, _ in INSULATED:
+    for net, a, b, _ in insulated:
         for h in (a, b):
             if h not in pin_at and h not in bare_owner:
                 errors.append(f"insulated wire {net} ends at empty hole {h}")
@@ -155,7 +161,7 @@ def check():
     for h, (ref, pid, net) in pin_at.items():
         groups[find(h)].add(pid)
     found = {frozenset(g) for g in groups.values() if len(g) > 1}
-    want = {frozenset(v) for v in EXPECTED.values()}
+    want = {frozenset(v) for v in expected.values()}
     for g in want - found:
         errors.append("net incomplete or merged: " + ", ".join(sorted(g)))
     for g in found - want:

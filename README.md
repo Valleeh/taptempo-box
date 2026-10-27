@@ -8,7 +8,7 @@ A small foot/desk box that turns a tapped tempo into **MIDI clock** and two **sw
 
 | Folder | What it is | Status |
 |---|---|---|
-| [`nano-perfboard/`](nano-perfboard/) | Arduino Nano + optocouplers on a 5 × 7 cm perfboard, hand-soldered. Beginner-friendly build guide. | Designed, layout checked |
+| [`nano-perfboard/`](nano-perfboard/) | Arduino Nano + optocouplers on a 5 × 7 cm perfboard, hand-soldered. Beginner-friendly build guide. Optional variant with a second, separate TRS output (D7/D6). | Designed, layout checked |
 | [`smd-pcb/`](smd-pcb/) | Custom 2-layer PCB (52 × 70 mm) assembled by JLCPCB: ATmega328P-AU, CH340C, USB-C, regulator on board. Same pin mapping, so the same firmware runs. | Designed, ERC/DRC clean, not built yet |
 
 Both share the same 3D-printed enclosure (60 × 110 × 36 mm, CadQuery), adapted per version.
@@ -22,6 +22,7 @@ Both share the same 3D-printed enclosure (60 × 110 × 36 mm, CadQuery), adapted
 | Encoder A / B | D3 / D2 |
 | Switched output 1 → TRS tip (PC817, 220 Ω) | D10 |
 | Switched output 2 → TRS ring (PC817, 220 Ω) | D9 |
+| Perfboard 2-jack variant only: output 3 → TRS 2 tip / output 4 → TRS 2 ring | D7 / D6 |
 | MIDI OUT (DIN pin 5 via 220 Ω) | D1 / TX |
 | OLED SDA / SCL (SSD1306, I²C) | A4 / A5 |
 | Power | 9 V barrel (center negative) → Schottky → VIN |
@@ -65,6 +66,7 @@ Perfboard drawings and guide (plain Python 3):
 ```sh
 cd nano-perfboard/perfboard
 python3 drawings.py && python3 build_guide.py
+python3 drawings.py 2trs && python3 build_guide.py 2trs   # 2-jack variant
 cd ../share && python3 build_standalone.py
 ```
 

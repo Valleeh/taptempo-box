@@ -1515,7 +1515,8 @@ pre { background: var(--code); border-radius: 6px; padding: 14px; overflow-x: au
   <h3>Test-Sketch</h3>
   <pre><code>// Tap-Tempo-Box: Hardware-Test
 // Zeigt auf dem Display und im Seriellen Monitor (115200 Baud), ob Taster und
-// Drehgeber funktionieren, und schaltet die beiden Klinken-Ausgänge abwechselnd.
+// Drehgeber funktionieren, und schaltet die Klinken-Ausgänge abwechselnd
+// (bei der Variante mit 2 Klinken auch Klinke 2 an D7/D6).
 // Benötigt die Bibliothek &quot;U8g2&quot; (Arduino IDE: Werkzeuge &gt; Bibliotheken verwalten).
 
 #include &lt;U8x8lib.h&gt;
@@ -1528,6 +1529,8 @@ const int PIN_A = 3;       // Drehgeber A
 const int PIN_B = 2;       // Drehgeber B
 const int PIN_TIP = 10;    // Optokoppler U2 -&gt; Klinke Tip
 const int PIN_RING = 9;    // Optokoppler U3 -&gt; Klinke Ring
+const int PIN_TIP2 = 7;    // nur Variante mit 2 Klinken: U4 -&gt; Klinke 2 Tip
+const int PIN_RING2 = 6;   // nur Variante mit 2 Klinken: U5 -&gt; Klinke 2 Ring
 
 volatile int position = 0;
 
@@ -1543,6 +1546,8 @@ void setup() {
   pinMode(PIN_B, INPUT_PULLUP);
   pinMode(PIN_TIP, OUTPUT);
   pinMode(PIN_RING, OUTPUT);
+  pinMode(PIN_TIP2, OUTPUT);
+  pinMode(PIN_RING2, OUTPUT);
   attachInterrupt(digitalPinToInterrupt(PIN_A), onTurn, CHANGE);
 
   Serial.begin(115200);
@@ -1560,6 +1565,8 @@ void loop() {
     tipClosed = !tipClosed;
     digitalWrite(PIN_TIP, tipClosed);
     digitalWrite(PIN_RING, !tipClosed);
+    digitalWrite(PIN_TIP2, tipClosed);           // Klinke 2 schaltet im gleichen Takt
+    digitalWrite(PIN_RING2, !tipClosed);
   }
 
   bool tap = digitalRead(PIN_TAP) == LOW;        // gedrückt = LOW
