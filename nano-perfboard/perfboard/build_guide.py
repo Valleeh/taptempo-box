@@ -1,7 +1,13 @@
 """Generate the beginner build guide (guide/index.html) from the verified layout data."""
-import html, os
-import perfboard as P
+import html, importlib, os, sys
 import drawings as D
+
+# python3 build_guide.py        -> guide/index.html        (1 Klinke)
+# python3 build_guide.py 2trs   -> guide-2trs/index.html   (2 Klinken, perfboard_2trs.py)
+VARIANT = sys.argv[1] if __name__ == "__main__" and len(sys.argv) > 1 else ""
+P = importlib.import_module("perfboard_" + VARIANT if VARIANT else "perfboard")
+D.use(P)
+TWO = VARIANT == "2trs"
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 assert not P.check(), P.check()
@@ -13,6 +19,9 @@ NET_TEXT = {
     "MIDI_4": "R1 → MIDI Pin 4", "MIDI_5": "R2 → MIDI Pin 5", "VIN9": "9 V → Diode", "VIN": "Diode → Nano VIN",
     "OPTO2": "D9 → Widerstand R4", "RING": "U3 → Klinke Ring", "+5V": "5 V vom Nano",
     "MIDI_TX": "TX → Widerstand R2", "TAP": "D5 → TAP-Leiste", "STARTSTOP": "D4 → Drehgeber-Taster",
+    "OPTO3": "D7 → Widerstand R5", "OK3_A": "R5 → Optokoppler U4", "OPTO4": "D6 → Widerstand R6",
+    "OK4_A": "R6 → Optokoppler U5", "TIP2": "U4 → Klinke 2 Tip", "RING2": "U5 → Klinke 2 Ring",
+    "SLEEVE2": "U4/U5 → Klinke 2 Sleeve",
 }
 WIRE_HEX = D.WIRE_HEX
 
@@ -52,9 +61,27 @@ def holes(ref):
     return ", ".join(f"{h} ({lab})" if lab else h for h, (lab, _) in c["pins"].items())
 
 
+TWO_INTRO = TWO_CHECK = TWO_CABLE = TWO_MOUNT = TWO_TROUBLE = ""
+if TWO:
+    TWO_INTRO = ('<div class="warn"><strong>Variante mit 2 Klinken:</strong> wie die normale Box, plus eine zweite, '
+                 'eigene Klinkenbuchse (Klinke 2) mit zwei weiteren Optokopplern U4 und U5 an D7 (Tip) und D6 (Ring). '
+                 'Klinke 2 hat einen eigenen Sleeve und ist von Klinke 1 und von GND getrennt. '
+                 'Die neuen Teile sitzen unter dem Nano.</div>')
+    TWO_CHECK = ('<li><strong>Piep</strong> zwischen K6 und M15, K7 und M17, Q15 und G17, Q17 und G20, '
+                 'J17 und K17 (Tip 2), J18 und J21 und K18 (Sleeve 2), J20 und K19 (Ring 2).</li>'
+                 '<li><strong>Kein Piep</strong> zwischen K18 (Sleeve 2) und E14 (GND) und zwischen K18 und R8 (Sleeve 1).</li>')
+    TWO_CABLE = ('<tr><td>Klinkenbuchse 2</td><td class="mono">K17, K18, K19</td>'
+                 '<td>Tip → K17, Sleeve → K18, Ring → K19. Genau wie bei Klinke 1.</td></tr>')
+    TWO_MOUNT = ('<section><h2><span class="step">8</span>Einbau</h2>'
+                 '<p>Diese Variante hat kein eigenes Gehäusemodell. Im Standard-Gehäuse ist nur ein Loch für eine Klinke; '
+                 'für Klinke 2 ein zweites Loch (6 mm, für Gewinde M6) bohren, mit genug Abstand zur ersten Buchse. '
+                 'Sonst wie beim Standard-Gehäuse.</p></section>')
+    TWO_TROUBLE = ('<li><strong>Klinke 2 schaltet nicht:</strong> U4/U5 falsch herum (Punkt nach links oben, auf G17 bzw. G20), '
+                   'oder der Sketch ist der alte ohne D7/D6.</li>')
+
 SKETCH = open(os.path.join(HERE, "..", "..", "firmware", "taptempo_test", "taptempo_test.ino")).read()
 
-PAGE = f"""<title>Tap-Tempo-Box Bauanleitung</title>
+PAGE = f"""<title>Tap-Tempo-Box Bauanleitung{" (2 Klinken)" if TWO else ""}</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@600;700&family=Barlow:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
@@ -123,8 +150,8 @@ pre {{ background: var(--code); border-radius: 6px; padding: 14px; overflow-x: a
 
 <main>
 <header>
-  <h1>Tap-Tempo-Box löten</h1>
-  <p>Schritt für Schritt auf einer Lochrasterplatine, ohne Vorkenntnisse. Alles, was man falsch herum einsetzen kann, ist markiert. Hake beim Löten ab, was erledigt ist; die Haken bleiben in diesem Browser gespeichert.</p>
+  <h1>Tap-Tempo-Box löten{" – 2 Klinken" if TWO else ""}</h1>
+  <p>Schritt für Schritt auf einer Lochrasterplatine, ohne Vorkenntnisse. Alles, was man falsch herum einsetzen kann, ist markiert. Hake beim Löten ab, was erledigt ist; die Haken bleiben in diesem Browser gespeichert.</p>{TWO_INTRO}
   <div class="facts"><span>Zeit: ca. 4–6 Stunden</span><span>Platine 5 × 7 cm, 18 × 24 Löcher</span><span>{len(P.BARE)} Brücken, {len(P.INSULATED)} Drähte</span><span class="progress" id="progress">0 erledigt</span></div>
 </header>
 
@@ -136,9 +163,9 @@ pre {{ background: var(--code); border-radius: 6px; padding: 14px; overflow-x: a
       <tr><td>1</td><td>Lochrasterplatine 5 × 7 cm (Lötpunkte, 2,54 mm)</td><td>doppelseitig verzinnt ist leichter zu löten</td></tr>
       <tr><td>1</td><td>Arduino Nano (Klon reicht)</td><td>mit Mini-USB oder USB-C, beides passt</td></tr>
       <tr><td>2</td><td>Buchsenleiste 15-polig, 2,54 mm</td><td>Sockel für den Nano</td></tr>
-      <tr><td>2</td><td>IC-Sockel 4-polig (DIP-4)</td><td>oder einen 8-poligen durchsägen</td></tr>
-      <tr><td>2</td><td>Optokoppler PC817</td><td>DIP-Gehäuse</td></tr>
-      <tr><td>4</td><td>Widerstand 220 Ω, ¼ W</td><td>Farbringe Rot-Rot-Braun</td></tr>
+      <tr><td>{4 if TWO else 2}</td><td>IC-Sockel 4-polig (DIP-4)</td><td>oder einen 8-poligen durchsägen</td></tr>
+      <tr><td>{4 if TWO else 2}</td><td>Optokoppler PC817</td><td>DIP-Gehäuse</td></tr>
+      <tr><td>{6 if TWO else 4}</td><td>Widerstand 220 Ω, ¼ W</td><td>Farbringe Rot-Rot-Braun</td></tr>
       <tr><td>2</td><td>Kondensator 100 nF (Keramik, „104“)</td><td>Rastermaß 2,5 mm</td></tr>
       <tr><td>1</td><td>Schottky-Diode 1N5817</td><td>Verpolschutz</td></tr>
       <tr><td>1</td><td>Stiftleiste gerade, 1 × 40</td><td>für Display und Klinke</td></tr>
@@ -148,7 +175,7 @@ pre {{ background: var(--code); border-radius: 6px; padding: 14px; overflow-x: a
       <tr><td>1</td><td>Drucktaster 16 mm, nicht rastend</td><td>max. 22 mm tief</td></tr>
       <tr><td>1</td><td>OLED 0,96″ I²C (SSD1306), 4 Pins</td><td>27 × 28 mm</td></tr>
       <tr><td>1</td><td>MIDI-Einbaubuchse DIN 5-polig 180°</td><td>mit 2 Schraublöchern</td></tr>
-      <tr><td>1</td><td>Klinken-Einbaubuchse 3,5 mm Stereo</td><td>Gewinde M6</td></tr>
+      <tr><td>{2 if TWO else 1}</td><td>Klinken-Einbaubuchse 3,5 mm Stereo</td><td>Gewinde M6</td></tr>
       <tr><td>1</td><td>Hohlstecker-Einbaubuchse 5,5/2,1 mm</td><td>passend zu deinem Netzteil</td></tr>
       <tr><td>je 4</td><td>Schrauben M2 × 6 und M3 × 8 (Senkkopf)</td><td>Platine bzw. Deckel</td></tr>
       <tr><td></td><td>Schaltdraht (isoliert) in mehreren Farben, verzinnter Draht 0,5 mm, Schrumpfschlauch</td><td></td></tr>
@@ -183,10 +210,10 @@ pre {{ background: var(--code); border-radius: 6px; padding: 14px; overflow-x: a
   <h2><span class="step">1</span>Flache Bauteile</h2>
   <p>Immer vom flachsten zum höchsten Bauteil löten, dann liegt die Platine beim Umdrehen plan auf. Bein durchstecken, auf der Unterseite leicht auseinanderbiegen, löten, abschneiden.</p>
   <ul class="steps">
-    <li><span><strong>R1–R4</strong> (220 Ω, Rot-Rot-Braun). Richtung egal.<br><span class="mono muted">R1: P19–P23 · R2: R19–R23 · R3: L3–L7 · R4: L8–L12</span></span></li>
+    <li><span><strong>R1–R{6 if TWO else 4}</strong> (220 Ω, Rot-Rot-Braun). Richtung egal.<br><span class="mono muted">R1: P19–P23 · R2: R19–R23 · R3: L3–L7 · R4: L8–L12{" · R5: M15–Q15 · R6: M17–Q17" if TWO else ""}</span></span></li>
     <li><span><strong>D1</strong> (1N5817): A20–E20. <strong>Der Ring zeigt nach rechts zu E20</strong>, zum Nano.</span></li>
     <li><span><strong>C1</strong>: F23–G23 und <strong>C2</strong>: I23–J23. Richtung egal.</span></li>
-    <li><span><strong>IC-Sockel</strong> U2 (M7, M8, P7, P8) und U3 (M12, M13, P12, P13). Die Kerbe des Sockels zeigt nach hinten (zu Reihe 1), dann weißt du später, wo Pin 1 hinkommt.</span></li>
+    <li><span><strong>IC-Sockel</strong> U2 (M7, M8, P7, P8){", U3 (M12, M13, P12, P13), U4 (G17, G18, J17, J18) und U5 (G20, G21, J20, J21)" if TWO else " und U3 (M12, M13, P12, P13)"}. Die Kerbe des Sockels zeigt nach hinten (zu Reihe 1), dann weißt du später, wo Pin 1 hinkommt.</span></li>
   </ul>
 </section>
 
@@ -194,7 +221,7 @@ pre {{ background: var(--code); border-radius: 6px; padding: 14px; overflow-x: a
   <h2><span class="step">2</span>Sockel und Stiftleisten</h2>
   <ul class="steps">
     <li><span><strong>Nano-Sockel</strong>: je eine 15-polige Buchsenleiste in E1–E15 und K1–K15. Trick: Den Nano zum Löten einstecken, dann sitzen beide Leisten garantiert im richtigen Abstand. Erst je ein Bein an den Enden löten, Sitz prüfen, dann den Rest. Danach den Nano wieder herausziehen.</span></li>
-    <li><span><strong>Gerade Stiftleisten</strong> (kurze Seite in die Platine): 4 Pins in B7–B10 (Display) und 3 Pins in R7–R9 (Klinke).</span></li>
+    <li><span><strong>Gerade Stiftleisten</strong> (kurze Seite in die Platine): 4 Pins in B7–B10 (Display){", 3 Pins in R7–R9 (Klinke 1) und 3 Pins in K17–K19 (Klinke 2)" if TWO else " und 3 Pins in R7–R9 (Klinke)"}.</span></li>
     <li><span><strong>Gewinkelte Stiftleisten</strong> in Reihe 24, Stifte zeigen nach vorne über den Platinenrand hinaus: A24–B24 (9 V), G24–K24 (Drehgeber), M24–N24 (TAP), P24–R24 (MIDI).</span></li>
   </ul>
 </section>
@@ -223,9 +250,9 @@ pre {{ background: var(--code); border-radius: 6px; padding: 14px; overflow-x: a
   <ul>
     <li><strong>Kein Piep</strong> zwischen E12 (5V) und E14 (GND). Piept es: Kurzschluss suchen, nicht weitermachen.</li>
     <li><strong>Kein Piep</strong> zwischen A24 (+9 V) und B24 (GND).</li>
-    <li><strong>Piep</strong> zwischen E14 und jedem dieser Punkte: B10, B24, H24, K24, N24, Q24, M8, M13.</li>
+    <li><strong>Piep</strong> zwischen E14 und jedem dieser Punkte: B10, B24, H24, K24, N24, Q24, M8, M13{", G18, G21" if TWO else ""}.</li>
     <li><strong>Piep</strong> zwischen K8 und M24 (TAP), K9 und J24, K10 und G24, K11 und I24.</li>
-    <li><strong>Piep</strong> zwischen E8 und B8 (SDA), E9 und B9 (SCL), E12 und B7, E12 und P19.</li>
+    <li><strong>Piep</strong> zwischen E8 und B8 (SDA), E9 und B9 (SCL), E12 und B7, E12 und P19.</li>{TWO_CHECK}
     <li>Dioden-Messbereich: Rot an A20, Schwarz an E20 zeigt ca. 0,2–0,3 V. Andersherum: nichts.</li>
     <li>Mit der Lupe: keine Zinnbrücken zwischen benachbarten Lötpunkten, vor allem an den Nano-Leisten.</li>
   </ul>
@@ -241,7 +268,7 @@ pre {{ background: var(--code); border-radius: 6px; padding: 14px; overflow-x: a
       <tr><td>Drehgeber</td><td class="mono">G24–K24</td><td>3er-Seite: links A → G24, Mitte C → H24, rechts B → I24. 2er-Seite (Taster) → J24 und K24. Dreht er falsch herum, A und B tauschen.</td></tr>
       <tr><td>Display</td><td class="mono">B7–B10</td><td>nach Beschriftung: VCC → 5V (B7), SDA → B8, SCL → B9, GND → B10. Die Reihenfolge am Display ist je nach Hersteller anders; nur die Namen zählen. Am Display die Kabel direkt anlöten, kein Dupont-Stecker (sonst wird es unter dem Deckel zu hoch). Hat das Display schon Stifte, die Kabel daran löten und die Stifte danach kürzen.</td></tr>
       <tr><td>MIDI-Buchse</td><td class="mono">P24, Q24, R24</td><td>Pin 4 → P24, Pin 2 (mittlerer Kontakt) → Q24, Pin 5 → R24. Die Nummern stehen meist klein neben den Lötfahnen. Pins 1 und 3 bleiben frei.</td></tr>
-      <tr><td>Klinkenbuchse</td><td class="mono">R7, R8, R9</td><td>Tip → R7, Sleeve → R8, Ring → R9. Welche Fahne was ist: Stecker einstecken und mit dem Piepser suchen.</td></tr>
+      <tr><td>Klinkenbuchse</td><td class="mono">R7, R8, R9</td><td>Tip → R7, Sleeve → R8, Ring → R9. Welche Fahne was ist: Stecker einstecken und mit dem Piepser suchen.</td></tr>{TWO_CABLE}
       <tr><td>9-V-Buchse</td><td class="mono">A24 (+), B24 (−)</td><td>siehe Hinweis zum Netzteil</td></tr>
     </tbody>
   </table></div>
@@ -251,18 +278,18 @@ pre {{ background: var(--code); border-radius: 6px; padding: 14px; overflow-x: a
 <section>
   <h2><span class="step">7</span>Einstecken und erster Test</h2>
   <ul class="steps">
-    <li><span><strong>Optokoppler</strong> in die Sockel: Der Punkt auf dem Chip kommt nach links oben, auf <code>M7</code> bzw. <code>M12</code>.</span></li>
+    <li><span><strong>Optokoppler</strong> in die Sockel: Der Punkt auf dem Chip kommt nach links oben, auf <code>M7</code>{", <code>M12</code>, <code>G17</code> bzw. <code>G20</code>" if TWO else " bzw. <code>M12</code>"}.</span></li>
     <li><span><strong>Nano</strong> in den Sockel: USB-Buchse nach hinten zu Reihe 1. Pin „D12“ steckt in K1, „VIN“ in E15. Die Beschriftung auf dem Nano muss zum Lochplan passen.</span></li>
     <li><span>Nur USB anschließen. Arduino IDE installieren, Bibliothek <strong>U8g2</strong> installieren (Werkzeuge → Bibliotheken verwalten), Board „Arduino Nano“ wählen. Bei Klonen unter Prozessor „ATmega328P (Old Bootloader)“ probieren, falls das Hochladen scheitert.</span></li>
     <li><span>Test-Sketch unten hochladen. Das Display zeigt „Hardware-Test“. TAP und Drehgeber-Taster müssen „an“ anzeigen, Drehen zählt hoch und runter.</span></li>
-    <li><span>Klinken-Ausgang: Multimeter auf Durchgang zwischen Tip und Sleeve der Klinkenbuchse. Es piept im Sekundentakt abwechselnd mit Ring–Sleeve.</span></li>
+    <li><span>Klinken-Ausgang: Multimeter auf Durchgang zwischen Tip und Sleeve der Klinkenbuchse. Es piept im Sekundentakt abwechselnd mit Ring–Sleeve.{" Klinke 2 genauso: sie schaltet im gleichen Takt wie Klinke 1." if TWO else ""}</span></li>
     <li><span>Dann das 9-V-Netzteil statt USB: Display muss wieder angehen.</span></li>
   </ul>
   <h3>Test-Sketch</h3>
   <pre><code>{esc(SKETCH)}</code></pre>
 </section>
 
-<section>
+{TWO_MOUNT}<section{" hidden" if TWO else ""}>
   <h2><span class="step">8</span>Einbau</h2>
   <ul class="steps">
     <li><span>Buchsen in die Rückwand (9 V links, 3,5 mm rechts) und die MIDI-Buchse in die rechte Seitenwand schrauben. Passt eine Buchse nicht durchs Loch, vorsichtig aufbohren.</span></li>
@@ -279,14 +306,14 @@ pre {{ background: var(--code); border-radius: 6px; padding: 14px; overflow-x: a
     <li><strong>Nano wird heiß:</strong> sofort abstecken, Kurzschluss zwischen 5V und GND suchen (Schritt 5).</li>
     <li><strong>Taster reagiert nicht:</strong> Durchgang von der Stiftleiste zum Nano-Pin messen (Drahttabelle).</li>
     <li><strong>MIDI kommt nicht an:</strong> Pin 4 und Pin 5 an der Buchse tauschen. Dabei geht nichts kaputt.</li>
-    <li><strong>Klinke schaltet nicht:</strong> Optokoppler falsch herum im Sockel (Punkt nach links oben).</li>
+    <li><strong>Klinke schaltet nicht:</strong> Optokoppler falsch herum im Sockel (Punkt nach links oben).</li>{TWO_TROUBLE}
   </ul>
 </section>
 </main>
 
 <script>
 (function () {{
-  const KEY = "taptempo-guide-ticks";
+  const KEY = "taptempo-guide-ticks{"-2trs" if TWO else ""}";
   let saved = {{}};
   try {{ saved = JSON.parse(localStorage.getItem(KEY) || "{{}}"); }} catch (e) {{ saved = {{}}; }}
   const boxes = Array.from(document.querySelectorAll(".tick"));
@@ -309,6 +336,13 @@ pre {{ background: var(--code); border-radius: 6px; padding: 14px; overflow-x: a
 """
 
 if __name__ == "__main__":
-    os.makedirs(os.path.join(HERE, "guide"), exist_ok=True)
-    open(os.path.join(HERE, "guide", "index.html"), "w").write(PAGE)
+    out = os.path.join(HERE, "guide-" + VARIANT if VARIANT else "guide")
+    os.makedirs(out, exist_ok=True)
+    open(os.path.join(out, "index.html"), "w").write(PAGE)
+    # offline copy for sharing: same page as a complete HTML document
+    doc = ('<!doctype html>\n<html lang="de">\n<head>\n<meta charset="utf-8">\n'
+           '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
+           '<style>[hidden]{display:none!important} body{margin:0}</style>\n' + PAGE + '\n</html>\n')
+    name = "taptempo-bauanleitung" + ("-2klinken" if TWO else "") + ".html"
+    open(os.path.join(HERE, "..", "share", name), "w").write(doc)
     print("ok", len(PAGE) // 1024, "KB")
